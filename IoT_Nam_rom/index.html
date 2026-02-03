@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HỆ THỐNG GIÁM SÁT NẤM RƠM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a; 
+            color: #f1f5f9;
+        }
+
+        .heading-industrial {
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        /* Card Phong cách Doanh nghiệp */
+        .corp-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        /* HIỆU ỨNG NÚT BẤM VẬT LÝ */
+        .btn-command {
+            background: #334155;
+            border: 1px solid #475569;
+            border-bottom: 5px solid #0f172a;
+            border-radius: 6px;
+            transition: all 0.1s ease;
+            font-weight: 800;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+        .btn-command:active {
+            transform: translateY(3px);
+            border-bottom-width: 1px;
+            background: #1e293b;
+        }
+        .btn-command.active-emerald {
+            background: #0ea5e9;
+            border-color: #38bdf8;
+            border-bottom-color:#0369a1;
+            color: white;
+            box-shadow: 0 4px 15px -3px rgba(14, 165, 233, 0.4);
+        }
+
+        /* Toast thông báo */
+        #notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s ease;
+        }
+        #notification-toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        input[type=range] { accent-color: #10b981; }
+        .hidden-tab { display: none; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="notification-toast">Hệ thống: Lệnh đã được thực thi</div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-12 border-b border-slate-700 pb-8">
+            <h1 class="heading-industrial text-4xl md:text-5xl text-white mb-2">
+                HỆ THỐNG GIÁM SÁT VÀ ĐIỀU KHIỂN NẤM RƠM
+            </h1>
+            <div class="flex justify-center items-center gap-4">
+                <div class="h-px w-20 bg-emerald-500"></div>
+                <div class="flex items-center gap-2">
+                    <span id="statusDot" class="w-3 h-3 bg-red-500 rounded-full"></span>
+                    <span id="mqttStatus" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Hệ thống đang khởi động...</span>
+                </div>
+                <div class="h-px w-20 bg-emerald-500"></div>
+            </div>
+        </header>
+
+        <div class="flex gap-4 mb-8 justify-center">
+            <button onclick="switchTab('monitor')" id="tabMonitor" class="px-8 py-2 bg-emerald-600 text-white font-bold rounded text-sm uppercase">Home</button>
+            <button onclick="switchTab('charts')" id="tabCharts" class="px-8 py-2 bg-slate-800 text-slate-400 font-bold rounded text-sm uppercase hover:bg-slate-700">Biểu đồ</button>
+            <button onclick="switchTab('images')" id="tabImages" class="px-8 py-2 bg-slate-800 text-slate-400 font-bold rounded text-sm uppercase hover:bg-slate-700">Hình ảnh</button>    
+        </div>
+
+        <div id="contentMonitor" class="grid grid-cols-12 gap-8">
+            <div class="col-span-12 lg:col-span-8 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="corp-card p-6 border-t-4 border-emerald-500">
+                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Nhiệt Độ Hiện Tại</p>
+                        <div class="text-5xl font-extrabold text-white"><span id="temperatureValue">--</span><span class="text-xl text-emerald-500">°C</span></div>
+                    </div>
+                    <div class="corp-card p-6 border-t-4 border-blue-500">
+                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Độ Ẩm Không Khí</p>
+                        <div class="text-5xl font-extrabold text-white"><span id="humidityValue">--</span><span class="text-xl text-blue-500">%</span></div>
+                    </div>
+                    <div class="corp-card p-6 border-t-4 border-slate-500">
+                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Nồng Độ CO2</p>
+                        <div class="text-5xl font-extrabold text-white"><span id="co2Value">--</span><span class="text-xs text-slate-500 ml-1">PPM</span></div>
+                    </div>
+                </div>
+
+                <div class="corp-card p-8">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-3">
+                            <span class="w-2 h-6 bg-emerald-500"></span> BẢNG ĐIỀU KHIỂN TRUNG TÂM
+                        </h2>
+                        <div class="flex gap-2">
+                            <button id="autoButton" class="btn-command px-6 py-2 text-xs">TỰ ĐỘNG</button>
+                            <button id="manualButton" class="btn-command px-6 py-2 text-xs">THỦ CÔNG</button>
+                        </div>
+                    </div>
+                        
+                    <div id="autoControls" class="hidden grid grid-cols-2 gap-4 mb-8">
+                        <button id="knottingButton" class="btn-command py-5 text-sm uppercase">
+                            Giai đoạn Kết tơ
+                        </button>
+                        <button id="fruitingButton" class="btn-command py-5 text-sm uppercase">
+                            Giai đoạn Quả thể
+                        </button>
+                    </div>
+
+                    <div id="manualControls" class="hidden grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div class="space-y-6">
+                            <div class="bg-slate-900/50 p-4 rounded-lg">
+                                <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-3 uppercase">Quạt 1: <span id="fan1Label" class="text-emerald-400">0%</span></div>
+                                <input type="range" id="fan1Slider" min="0" max="100" value="0" class="w-full">
+                            </div>
+                            <div class="bg-slate-900/50 p-4 rounded-lg">
+                                <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-3 uppercase">Quạt 2: <span id="fan2Label" class="text-emerald-400">0%</span></div>
+                                <input type="range" id="fan2Slider" min="0" max="100" value="0" class="w-full">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4">
+                            <button id="mistButton" class="btn-command py-5 text-sm">CẤP ẨM</button>
+                            <button id="lightButton" class="btn-command py-5 text-sm">CẤP NHIỆT</button>
+                        </div>
+                    </div>
+
+                    <div id="deviceRealStatus" class="mt-8 pt-6 border-t border-slate-700 grid grid-cols-4 gap-4 text-center">
+                        <div><p class="text-[9px] font-bold text-slate-500 uppercase">FAN1 Duty</p><p id="status_fan1" class="text-sm font-bold">--</p></div>
+                        <div><p class="text-[9px] font-bold text-slate-500 uppercase">FAN2 Duty</p><p id="status_fan2" class="text-sm font-bold">--</p></div>
+                        <div><p class="text-[9px] font-bold text-slate-500 uppercase">CẤP ẨM</p><p id="status_mist" class="text-sm font-bold text-emerald-500">--</p></div>
+                        <div><p class="text-[9px] font-bold text-slate-500 uppercase">CẤP NHIỆT</p><p id="status_light" class="text-sm font-bold text-blue-500">--</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-4 space-y-8">
+                <div class="corp-card p-6">
+                    <h3 class="text-xs font-bold text-slate-400 mb-6 uppercase tracking-widest">Giám sát AI</h3>
+                    <button id="cameraButton" class="btn-command w-full py-4 mb-6 !bg-sky-600 !text-white !border-sky-800 !border-bottom-4 shadow-lg shadow-sky-900/40">CHỤP ẢNH GIÁM SÁT</button>
+                    <div class="bg-black/40 rounded p-4 font-mono text-[11px] text-emerald-400 min-h-[140px] border border-slate-700">
+                        <div id="detectObjects">> Chờ tín hiệu ảnh...</div>
+                        <div id="detectTimestamp" class="mt-4 text-slate-600 text-[9px] italic">Timestamp: --:--:--</div>
+                    </div>
+                </div>
+
+                <div class="corp-card p-6">
+                    <h3 class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Lịch sử vận hành</h3>
+                    <div id="logArea" class="h-[150px] overflow-y-auto text-[10px] text-slate-500 space-y-1">
+                        <div>> Đang kết nối server...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="contentCharts" class="hidden-tab fixed inset-0 bg-[#0f172a] z-50 overflow-y-auto p-4 md:p-8">
+            <div class="max-w-7xl mx-auto space-y-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="heading-industrial text-2xl text-emerald-500">BIỂU ĐỒ DỮ LIỆU LỊCH SỬ</h2>
+                    <button onclick="switchTab('monitor')" class="px-6 py-2 bg-slate-800 text-white rounded font-bold hover:bg-slate-700 border border-slate-600">
+                        ← QUAY LẠI
+                    </button>
+                </div>
+                
+                <div class="corp-card p-8 h-[450px]">
+                    <canvas id="thChart"></canvas>
+                </div>
+                
+                <div class="corp-card p-8 h-[450px]">
+                    <canvas id="co2Chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="contentImages" class="hidden-tab fixed inset-0 bg-[#0f172a] z-50 overflow-y-auto p-4 md:p-8">
+            <div class="max-w-7xl mx-auto space-y-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="heading-industrial text-2xl text-sky-500">THƯ VIỆN HÌNH ẢNH GIÁM SÁT</h2>
+                    
+                    <button id="resetImagesButton" class="px-6 py-2 bg-rose-900/30 text-rose-500 rounded font-bold hover:bg-rose-700 hover:text-white border border-rose-800 transition-all text-sm">
+                            XÓA TOÀN BỘ ẢNH
+                    </button>
+                    <button onclick="switchTab('monitor')" class="px-6 py-2 bg-slate-800 text-white rounded font-bold hover:bg-slate-700 border border-slate-600">
+                        ← QUAY LẠI
+                    </button>
+                </div>
+                
+                <div id="imageGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="text-slate-500 animate-pulse text-center col-span-full py-20 uppercase tracking-widest text-xs">
+                        > Đang tải dữ liệu từ máy chủ AI...
+                    </div>
+                </div>
+            </div>
+        </div>            
+            
+        <footer class="mt-16 pt-8 border-t border-slate-800">
+            <div class="corp-card p-6 border-l-4 border-rose-600 bg-rose-950/10 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h4 class="text-sm font-bold text-rose-500 uppercase tracking-widest">RESET DATABASE</h4>
+                    <p class="text-[10px] text-slate-500 mt-1 uppercase">Lưu ý: Thao tác RESET sẽ xóa toàn bộ dữ liệu lịch sử trên Server.</p>
+                </div>
+                <button id="resetDataButton" class="btn-command px-10 py-3 !bg-rose-700 !text-white !border-rose-900 !border-bottom-4 hover:!bg-rose-600">
+                    RESET DATABASE
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://54.153.160.152:8000';
+        const api = {
+            sensor: `${BASE_URL}/read_data`,
+            button: `${BASE_URL}/read_button`,
+            control: `${BASE_URL}/button_all`,
+            detect: `${BASE_URL}/read_detect`,
+            camera: `${BASE_URL}/camera`,
+            status: `${BASE_URL}/status`,
+            deviceStatus: `${BASE_URL}/read_status_device`,
+            reset: `${BASE_URL}/reset_data`,
+            history: `${BASE_URL}/read_bieudo`,
+            images: `${BASE_URL}/read_images`,
+            resetImages: `${BASE_URL}/reset_images?key=RESET123`,    
+        };
+
+        let deviceStates = { button1: 1, button2: 0, button3: 0, button4: 0, button5: 0, button6: 0, button7: 0 };
+        let thChart, co2Chart;
+
+        function showNotify(msg) {
+            const toast = document.getElementById('notification-toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+            
+            const logArea = document.getElementById('logArea');
+            const entry = document.createElement('div');
+            entry.textContent = `> [${new Date().toLocaleTimeString()}] ${msg}`;
+            logArea.prepend(entry);
+        }
+
+        // HÀM RESET DỮ LIỆU
+        async function resetDatabase() {
+            const confirmAction = confirm("CẢNH BÁO QUẢN TRỊ:\nBạn có chắc chắn muốn xóa sạch toàn bộ dữ liệu lịch sử không?\nThao tác này không thể khôi phục.");
+            
+            if (confirmAction) {
+                try {
+                    showNotify("Admin: Đang tiến hành xóa dữ liệu...");
+                    const res = await fetch(api.reset, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (res.ok) {
+                        showNotify("Hệ thống: Reset thành công! Đang tải lại...");
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        showNotify("Lỗi: Server từ chối lệnh Reset.");
+                    }
+                } catch (e) {
+                    showNotify("Lỗi: Không thể kết nối để Reset.");
+                }
+            }
+        }
+
+        function switchTab(tab) {
+            const mon = document.getElementById('contentMonitor');
+            const cha = document.getElementById('contentCharts');
+            const img = document.getElementById('contentImages');
+            
+            const header = document.querySelector('header');
+            const footer = document.querySelector('footer');
+            const tabButtons = document.querySelector('.flex.gap-4.mb-8.justify-center');
+
+            // Ẩn tất cả các vùng nội dung
+            mon.classList.add('hidden-tab');
+            cha.classList.add('hidden-tab');
+            img.classList.add('hidden-tab');
+
+            if (tab === 'monitor') {
+                mon.classList.remove('hidden-tab');
+                header.style.display = 'block';
+                footer.style.display = 'block';
+                tabButtons.style.display = 'flex';
+            } else if (tab === 'charts') {
+                cha.classList.remove('hidden-tab');
+                header.style.display = 'none';
+                footer.style.display = 'none';
+                tabButtons.style.display = 'none';
+                
+                if(thChart) thChart.resize();
+                if(co2Chart) co2Chart.resize();
+                UpdateCharts();
+            } else if (tab === 'images') {
+                img.classList.remove('hidden-tab');
+                header.style.display = 'none';
+                footer.style.display = 'none';
+                tabButtons.style.display = 'none';
+                
+                LoadAIImages();
+            }
+        }
+
+        function initCharts() {
+            Chart.defaults.color = '#94a3b8';
+            const options = { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#334155' } }, x: { grid: { display: false } } } };
+            thChart = new Chart(document.getElementById('thChart').getContext('2d'), {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'NHIỆT ĐỘ', data: [], borderColor: '#10b981', tension: 0.1 },
+                    { label: 'ĐỘ ẨM', data: [], borderColor: '#3b82f6', tension: 0.1 }
+                ]},
+                options: options
+            });
+            co2Chart = new Chart(document.getElementById('co2Chart').getContext('2d'), {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'CO2 PPM', data: [], borderColor: '#f59e0b', backgroundColor: '#f59e0b11', fill: true, tension: 0.1 }
+                ]},
+                options: options
+            });
+        }
+
+        async function sendAllButtonStates(msg) {
+            try {
+                await fetch(api.control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(deviceStates) });
+                if(msg) showNotify(msg);
+            } catch (e) { showNotify("Lỗi kết nối Server!"); }
+        }
+            
+        async function ReadSensorData() {
+            try {
+                const res = await fetch(api.sensor);
+                const result = await res.json();
+                if (result.data) {
+                    const d = result.data;
+                    // Chỉ cập nhật hiển thị số và biến tạm
+                    document.getElementById('temperatureValue').textContent = parseFloat(d.temperature).toFixed(1);
+                    document.getElementById('humidityValue').textContent = Math.round(d.humidity);
+                    document.getElementById('co2Value').textContent = Math.round(d.CO2);
+                    
+                    // Lưu vào biến tạm để hàm biểu đồ lấy dữ liệu
+                    latestData.temp = d.temperature;
+                    latestData.hum = d.humidity;
+                    latestData.co2 = d.CO2;
+                }
+            } catch (e) {}
+        }
+             
+        async function LoadAIImages() {
+            const grid = document.getElementById('imageGrid');
+            try {
+                const res = await fetch(api.images);
+                const result = await res.json();
+                if (result.status === "success" && result.data) {
+                    grid.innerHTML = result.data.map(item => `
+                        <div class="corp-card overflow-hidden group">
+                            <div class="relative aspect-video bg-black/50">
+                                <img src="${BASE_URL}/${item.path}" 
+                                     class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                     onerror="this.src='https://via.placeholder.com/400x225?text=Loi+anh'">
+                            </div>
+                            <div class="p-4 border-t border-slate-700 bg-slate-900/50">
+                                <div class="text-[9px] text-sky-400 font-bold uppercase mb-1">${item.source}</div>
+                                <div class="text-[11px] text-slate-300 truncate font-mono">${item.filename}</div>
+                                <div class="text-[9px] text-slate-500 mt-2 italic">${new Date(item.timestamp).toLocaleString('vi-VN')}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 text-rose-500 text-xs font-bold tracking-widest uppercase">> LỖI KẾT NỐI MÁY CHỦ HÌNH ẢNH</div>`;
+            }
+        }
+           
+        async function resetImagesData() {
+            const confirmAction = confirm("CẢNH BÁO HỆ THỐNG:\nThao tác này sẽ xóa vĩnh viễn toàn bộ file ảnh trên Server và Database.\nBạn có chắc chắn không?");
+            
+            if (confirmAction) {
+                try {
+                    showNotify("Admin: Đang xóa kho ảnh...");
+                    const res = await fetch(api.resetImages, { method: 'DELETE' });
+                    const result = await res.json();
+                    
+                    if (result.status === "success") {
+                        showNotify("Hệ thống: Đã làm sạch kho ảnh!");
+                        LoadAIImages(); // Tải lại lưới ảnh (lúc này sẽ trống)
+                    } else {
+                        showNotify("Lỗi: Server từ chối lệnh xóa.");
+                    }
+                } catch (e) {
+                    showNotify("Lỗi: Không thể kết nối để xóa ảnh.");
+                }
+            }
+        }            
+           
+        async function UpdateCharts() {
+            try {
+                const res = await fetch(api.history);
+                const result = await res.json();
+                
+                if (result.data && Array.isArray(result.data)) {
+                    const labels = [];
+                    const tempValues = [];
+                    const humValues = [];
+                    const co2Values = [];
+
+                    // Lấy tối đa 120 mẫu mới nhất từ Database
+                    const dataToShow = result.data.slice(-120);
+
+                    dataToShow.forEach(item => {
+                        // Chuyển đổi timestamp từ server thành định dạng Giờ:Phút:Giây
+                        const timeLabel = new Date(item.timestamp_vn).toLocaleTimeString('vi-VN', { 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit' 
+                        });
+                        
+                        labels.push(timeLabel);
+                        tempValues.push(item.temperature);
+                        humValues.push(item.humidity);
+                        co2Values.push(item.CO2);
+                    });
+
+                    // Cập nhật mảng dữ liệu mới vào các biểu đồ
+                    thChart.data.labels = labels;
+                    thChart.data.datasets[0].data = tempValues;
+                    thChart.data.datasets[1].data = humValues;
+
+                    co2Chart.data.labels = labels;
+                    co2Chart.data.datasets[0].data = co2Values;
+
+                    // Vẽ lại biểu đồ mà không tạo hiệu ứng giật (animation: none)
+                    thChart.update('none');
+                    co2Chart.update('none');
+                }
+            } catch (e) {
+                console.log("Lỗi cập nhật biểu đồ lịch sử");
+            }
+        }
+            
+        async function ReadAndSyncButtonStates() {
+            try {
+                const res = await fetch(api.button);
+                const result = await res.json();
+                if (result.data) {
+                    const d = result.data; deviceStates = { ...d };
+                    const isAuto = d.button1 === 1;
+                    document.getElementById('autoButton').className = `btn-command px-6 py-2 text-xs ${isAuto ? 'active-emerald' : ''}`;
+                    document.getElementById('manualButton').className = `btn-command px-6 py-2 text-xs ${!isAuto ? 'active-emerald' : ''}`;
+                    document.getElementById('knottingButton').className = `btn-command py-5 text-sm ${d.button6 === 1 ? 'active-emerald' : ''}`;
+                    document.getElementById('fruitingButton').className = `btn-command py-5 text-sm ${d.button7 === 1 ? 'active-emerald' : ''}`;    
+                    
+                    document.getElementById('autoControls').classList.toggle('hidden', !isAuto);
+                    document.getElementById('manualControls').classList.toggle('hidden', isAuto);
+                        
+                    document.getElementById('fan1Slider').value = d.button2;
+                    document.getElementById('fan1Label').textContent = d.button2 + '%';
+                    document.getElementById('fan2Slider').value = d.button3;
+                    document.getElementById('fan2Label').textContent = d.button3 + '%';
+                    document.getElementById('mistButton').className = `btn-command py-5 text-sm ${d.button4 === 1 ? 'active-emerald' : ''}`;
+                    document.getElementById('lightButton').className = `btn-command py-5 text-sm ${d.button5 === 1 ? 'active-emerald' : ''}`;
+                }
+            } catch (e) {}
+        }
+
+        async function ReadDeviceRealStatus() {
+            try {
+                const res = await fetch(api.deviceStatus);
+                const result = await res.json();
+                if (result.data) {
+                    const d = result.data;
+                    document.getElementById('status_fan1').textContent = d.fan1_duty + '%';
+                    document.getElementById('status_fan2').textContent = d.fan2_duty + '%';
+                    document.getElementById('status_mist').textContent = d.humidifier;
+                    document.getElementById('status_light').textContent = d.heating;
+                }
+            } catch (e) {}
+        }
+
+        async function ReadDetectData() {
+            try {
+                const res = await fetch(api.detect);
+                const result = await res.json();
+                if (result.data) {
+                    document.getElementById('detectTimestamp').textContent = "Cập nhật: " + result.data.timestamp;
+                    let out = '';
+                    for (const [k, v] of Object.entries(result.data.objects)) {
+                        out += `<div>> PHÁT HIỆN: ${k.toUpperCase()} (${v})</div>`;
+                    }
+                    document.getElementById('detectObjects').innerHTML = out || '> Môi trường sạch';
+                }
+            } catch (e) {}
+        }
+
+        window.onload = () => {
+            initCharts();
+            document.getElementById('autoButton').onclick = () => { deviceStates.button1 = 1; sendAllButtonStates("Hệ thống: Chuyển chế độ TỰ ĐỘNG"); };
+            document.getElementById('manualButton').onclick = () => { deviceStates.button1 = 0; sendAllButtonStates("Hệ thống: Chuyển chế độ THỦ CÔNG"); };
+            document.getElementById('fan1Slider').onchange = (e) => { deviceStates.button2 = parseInt(e.target.value); sendAllButtonStates("Điều chỉnh: Quạt hút 1"); };
+            document.getElementById('fan2Slider').onchange = (e) => { deviceStates.button3 = parseInt(e.target.value); sendAllButtonStates("Điều chỉnh: Quạt hút 2"); };
+            document.getElementById('mistButton').onclick = () => { deviceStates.button4 = 1 - deviceStates.button4; sendAllButtonStates("Thực thi: Hệ thống phun sương"); };
+            document.getElementById('lightButton').onclick = () => { deviceStates.button5 = 1 - deviceStates.button5; sendAllButtonStates("Thực thi: Hệ thống chiếu sáng"); };
+            document.getElementById('knottingButton').onclick = () => { deviceStates.button6 = 1; deviceStates.button7 = 0; sendAllButtonStates("Chế độ: Giai đoạn KẾT TƠ"); };
+            document.getElementById('fruitingButton').onclick = () => { deviceStates.button7 = 1; deviceStates.button6 = 0; sendAllButtonStates("Chế độ: Giai đoạn QUẢ THỂ"); };    
+            document.getElementById('resetImagesButton').onclick = resetImagesData;
+            document.getElementById('resetDataButton').onclick = resetDatabase;
+
+            document.getElementById('cameraButton').onclick = async () => {
+                showNotify("AI: Bắt đầu quét hình ảnh...");
+
+                try {
+                    // 1. Gửi lệnh chụp ảnh
+                    await fetch(api.camera, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ "camera": 1 })
+                    });
+
+                    // Tắt tín hiệu chụp sau 200ms
+                    setTimeout(async () => {
+                        await fetch(api.camera, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ "camera": 0 })
+                        });
+                    }, 200);
+
+                    // 2. Chờ 3 giây để AI xử lý và cập nhật Database
+                    showNotify("AI: Đang phân tích hình ảnh...");
+
+                    setTimeout(async () => {
+                        const res = await fetch(api.detect);
+                        const result = await res.json();
+
+                        if (result.data && result.data.objects) {
+                            // Chuyển tất cả key về chữ thường để so sánh dễ dàng
+                            const detectedKeys = Object.keys(result.data.objects).map(k => k.toLowerCase());
+
+                            // Kiểm tra điều kiện 1: "khong phat hien" hoặc "to" -> KẾT TƠ
+                            const isKnotting = detectedKeys.some(key =>
+                                key.includes("khong phat hien") || key.includes("to")
+                            );
+
+                            // Kiểm tra điều kiện 2: "nam" -> QUẢ THỂ
+                            const isFruiting = detectedKeys.some(key =>
+                                key.includes("nam")
+                            );
+
+                            if (isKnotting) {
+                                showNotify("AI: Phát hiện tơ nấm. Chuyển sang KẾT TƠ");
+                                deviceStates.button6 = 1; // Kết tơ ON
+                                deviceStates.button7 = 0; // Quả thể OFF
+                                sendAllButtonStates("Hệ thống: Tự động chuyển Giai đoạn Kết tơ");
+                            } 
+                            else if (isFruiting) {
+                                showNotify("AI: Phát hiện nấm trưởng thành. Chuyển sang QUẢ THỂ");
+                                deviceStates.button6 = 0; // Kết tơ OFF
+                                deviceStates.button7 = 1; // Quả thể ON
+                                sendAllButtonStates("Hệ thống: Tự động chuyển Giai đoạn Quả thể");
+                            } 
+                            else {
+                                showNotify("AI: Phân tích hoàn tất. Chưa cần thay đổi giai đoạn.");
+                            }
+                        }
+                    }, 3000);
+
+                } catch (e) {
+                    showNotify("Lỗi: Không thể thực hiện giám sát AI");
+                }
+            };
+
+            setInterval(ReadSensorData, 500);
+            setInterval(UpdateCharts, 60000);
+            setTimeout(UpdateCharts, 1000);
+            setInterval(ReadAndSyncButtonStates, 3000);
+            setInterval(ReadDetectData, 2000);
+            setInterval(ReadDeviceRealStatus, 500);
+            // Tự động cập nhật danh sách ảnh mỗi 30 giây nếu đang ở tab Images
+            setInterval(() => {
+                const imgTab = document.getElementById('contentImages');
+                if (!imgTab.classList.contains('hidden-tab')) {
+                    LoadAIImages();
+                }
+            }, 30000);
+                
+            setInterval(async () => {
+                try {
+                    const res = await fetch(api.status);
+                    const d = await res.json();
+                    const ok = d.status === 'connected';
+                    document.getElementById('mqttStatus').textContent = ok ? 'ONLINE' : 'DISCONNECTED';
+                    document.getElementById('statusDot').className = ok ? 'w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]' : 'w-3 h-3 bg-red-500 rounded-full animate-pulse';
+                } catch(e) {}
+            }, 5000);
+        };
+    </script>
+</body>
+</html>
