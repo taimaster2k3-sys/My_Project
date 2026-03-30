@@ -1,11 +1,11 @@
-# Dự án Hệ thống Giám sát & Điều khiển
+# Project
 
 Đây là các thông tin về phần cứng của dự án:
 
-### 1. Sơ đồ nguyên lý (Schematic)
+### 1. Sơ đồ nguyên lý mô hình trồng nấm rơm (Schematic)
 ![Schematic Namrom](SCH_Namrom.png)
 
-### 2. Thiết kế mạch in (PCB Design)
+### 2. Mô hình trồng nấm rơm (PCB Design)
 ![PCB Namrom](PCB_Namrom.png)
 
 ### 3. Mô hình thực tế
