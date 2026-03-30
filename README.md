@@ -12,6 +12,7 @@
 ![Mô hình](mohinhnamrom.jpg)
 
 ### 4. AutoDoor_ESP32-C3_RFID
+![AutoDoor](ESP32_C3_RFID_Schematic.png)
 ![AutoDoor](ESP32_C3_RFID_Layout.png)
 ![AutoDoor](ESP32_C3_RFID_3DPCB.png)
 
