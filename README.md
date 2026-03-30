@@ -15,4 +15,6 @@
 ![AutoDoor](ESP32_C3_RFID_Schematic.png)
 ![AutoDoor](ESP32_C3_RFID_Layout.png)
 ![AutoDoor](ESP32_C3_RFID_3DPCB.png)
-
+### 5. Power LM7805
+![Power_7805](Power_LM7805.png)
+![Power_7805](Power_LM7805_3DPCB.png)
