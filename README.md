@@ -18,3 +18,13 @@
 ### 5. Power LM7805
 ![Power_7805](Power_LM7805.png)
 ![Power_7805](Power_LM7805_3DPCB.png)
+### 6. Đèn PUB65W
+![PUB65W](SCH_PU65W.png)
+![PUB65W](PCB_PU65W.png)
+### 7. F28379D điều khiển động cơ 3pha
+![F28379D](BoosterPack_LAUNCHXL-F28379D_Schematic.png)
+![F28379D](BoosterPack_LAUNCHXL-F28379D.png)
+![F28379D](BoosterPack_LAUNCHXL-F28379D_3DPCB.png)
+![F28379D](DC 3Pha_LAUNCHXL-F28379D_LCD_ScH.png)
+![F28379D](DC 3Pha__LAUNCHXL-F28379D_LCD_PCB.png)
+![F28379D](DC 3Pha_LAUNCHXL-F28379D_3DPCB.png)
